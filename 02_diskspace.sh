@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+clear="\e[39\e[0m"
+dim="\e[2m"
+
+# The parameter maxDiskUsage indicates when the bar should be displayed as red
+maxDiskUsage=80
+
+# The parameter barWidth indicates how long the disk usage bar should be
+barWidth=50
+
+# mountpoints contains all the directories which devices should be monitored
+# Examples: mountpoints="/ /boot /home" - this will monitor the devices mounted
+mountpoints="/"
+
+# Make space above
+echo ""
+echo "disk usage:"
+
+for point in ${mountpoints}; do
+    # Get the output of df and add spaces after the newlines
+    # If you only want local partitions, you can add the -l flag to the df command
+    line=$(df -h "${point}" | sed -e ':a;N;$!ba;s/\n/\n  /g')
+    usagePercent=$(echo "$line" | tail -n1 | awk '{print $5;}' | sed 's/%//')
+    usedBarWidth=$(((usagePercent * barWidth) / 100))
+    barContent=""
+    color="\e[32m"
+
+    # Color the bar red in case it's bigger than the speicified value
+    if [ "${usagePercent}" -ge "${maxDiskUsage}" ]; then
+        color="\e[31m"
+    fi
+    barContent="${color}"
+
+    # Build the usage bar
+    for _ in $(seq 1 $usedBarWidth); do
+        barContent="${barContent}="
+    done
+
+    # Rest of the unused space in white
+    barContent="${barContent}${clear}${dim}"
+    for _ in $(seq 1 $((barWidth - usedBarWidth))); do
+        barContent="${barContent}="
+    done
+    bar="[${barContent}${clear}]"
+
+    # Print the column/title bar
+    if [ "${titeled}" == "" ]; then
+        echo "  ${line}"
+        titeled="1"
+    else
+        echo "  ${line}"|tail -n1
+    fi
+    echo -e "  ${bar}"
+done
+
+echo
+echo -e "\e[1;33m##################################################\e[m"
